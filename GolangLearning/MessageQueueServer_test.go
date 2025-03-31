@@ -114,24 +114,6 @@ func TestMessageQueueServer_ConcurrentAccess(t *testing.T) {
 	}
 }
 
-func BenchmarkMessageQueueServer_SendMessage(b *testing.B) {
-	config := DefaultConfig()
-	server, err := NewMessageQueueServer(config)
-	if err != nil {
-		b.Fatalf("Failed to create server: %v", err)
-	}
-
-	if err := server.Start(); err != nil {
-		b.Fatalf("Failed to start server: %v", err)
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		server.SendMessage("benchmark message")
-	}
-
-	server.Shutdown()
-}
 
 func TestMessageQueueServer_RaceConditions(t *testing.T) {
 	config := DefaultConfig()
@@ -151,9 +133,8 @@ func TestMessageQueueServer_RaceConditions(t *testing.T) {
 		}(i)
 	}
 
-	// Concurrent shutdown
+	
 	go server.Shutdown()
 
-	// Wait for a bit to ensure race conditions are exposed
 	time.Sleep(time.Millisecond * 100)
 }

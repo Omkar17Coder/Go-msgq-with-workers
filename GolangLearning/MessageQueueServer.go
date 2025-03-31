@@ -8,12 +8,11 @@ import (
 )
 
 type Config struct {
-	BufferSize  int          
-	WorkerCount int           
-	RetryCount  int          
-	RetryDelay  time.Duration 
+	BufferSize  int
+	WorkerCount int
+	RetryCount  int
+	RetryDelay  time.Duration
 }
-
 
 func DefaultConfig() Config {
 	return Config{
@@ -24,16 +23,15 @@ func DefaultConfig() Config {
 	}
 }
 
-
 type MessageQueueServer struct {
 	userCh         chan string
 	quitCh         chan struct{}
 	wg             sync.WaitGroup
 	droppedMessage []string
 	config         Config
-	mu             sync.Mutex // For thread-safe access to droppedMessage
+	mu             sync.Mutex
+	userChClosed   bool
 }
-
 
 func NewMessageQueueServer(config Config) (*MessageQueueServer, error) {
 	if config.BufferSize <= 0 {
@@ -51,9 +49,9 @@ func NewMessageQueueServer(config Config) (*MessageQueueServer, error) {
 		quitCh:         make(chan struct{}),
 		droppedMessage: make([]string, 0),
 		config:         config,
+		userChClosed:   false,
 	}, nil
 }
-
 
 func (s *MessageQueueServer) StartWorker() error {
 	s.wg.Add(1)
@@ -78,12 +76,19 @@ func (s *MessageQueueServer) StartWorker() error {
 	return nil
 }
 
-
 func (s *MessageQueueServer) SendMessage(message string) error {
 	retryCount := 0
 	for {
+		s.mu.Lock()
+		if s.userChClosed {
+			s.mu.Unlock()
+			return fmt.Errorf("channel is closed, message dropped: %s", message)
+		}
+		s.mu.Unlock()
+
 		select {
 		case s.userCh <- message:
+
 			fmt.Println("Sent message:", message)
 			return nil
 		case <-s.quitCh:
@@ -103,11 +108,16 @@ func (s *MessageQueueServer) SendMessage(message string) error {
 	}
 }
 
-
 func (s *MessageQueueServer) Shutdown() error {
 	close(s.quitCh)
-	close(s.userCh)
-	s.wg.Wait()
+	s.wg.Wait()     
+	s.mu.Lock()
+	if !s.userChClosed {
+		close(s.userCh)
+		s.userChClosed = true
+	}
+	s.mu.Unlock()
+
 	fmt.Println("Server has shut down.")
 	return nil
 }
@@ -129,13 +139,11 @@ func (s *MessageQueueServer) PrintUnprocessedMessages() {
 	}
 }
 
-
 func (s *MessageQueueServer) GetDroppedMessages() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.droppedMessage
 }
-
 
 func (s *MessageQueueServer) GetConfig() Config {
 	return s.config

@@ -9,7 +9,9 @@ A robust message queue server implementation in Go that provides configurable me
 ├── main.go                    # Main application entry point
 └── GolangLearning/
     ├── MessageQueueServer.go  # Core message queue server implementation
-    └── MessageQueueServer_test.go  # Test suite for the server
+    ├── MessageQueueServer_test.go  # Test suite for the server
+    ├── Concurrency.go        # Basic concurrency examples
+    └── TwoFanInWithGracefulShutdown.go  # Fan-in pattern with graceful shutdown
 ```
 
 ## Features
@@ -21,6 +23,8 @@ A robust message queue server implementation in Go that provides configurable me
 - Thread-safe message handling
 - Unprocessed message tracking
 - Dropped message tracking during shutdown
+- Fan-in pattern implementation
+- Two-stage message processing pipeline
 
 ## Core Components
 
@@ -46,51 +50,54 @@ The main server implementation (`GolangLearning/MessageQueueServer.go`) provides
   - `PrintUnprocessedMessages()`: Prints messages that weren't processed
   - `GetDroppedMessages()`: Returns list of dropped messages
 
-### Main Application
+### Concurrency Examples
+Basic concurrency patterns demonstrating:
+- Channel usage
+- Goroutine synchronization
+- WaitGroup patterns
+- Buffered vs unbuffered channels
 
-The main application (`main.go`) demonstrates:
-
-- Server initialization
-- Concurrent message sending
+### TwoFanInWithGracefulShutdown
+Implements a two-stage fan-in pattern with:
+- Multiple input channels
 - Graceful shutdown handling
-- Message processing monitoring
+- Message aggregation
+- Error handling
 
-## Usage Example
+## Usage Examples
 
+### Basic Message Queue
+```go
+config := DefaultConfig()
+server, err := NewMessageQueueServer(config)
+if err != nil {
+    log.Fatal(err)
+}
+server.Start()
+server.SendMessage("test message")
+server.Shutdown()
+```
+
+### Fan-In Pattern
 ```go
 func main() {
-    // Create server with default configuration
-    config := DefaultConfig()
-    server, err := NewMessageQueueServer(config)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    // Start the server
-    server.Start()
-
-    // Send messages concurrently
-    var wg sync.WaitGroup
-    for i := 0; i < 10; i++ {
-        wg.Add(1)
-        go func(i int) {
-            defer wg.Done()
-            server.SendMessage(fmt.Sprintf("user_%d", i))
-        }(i)
-    }
-
-    // Shutdown after delay
-    time.Sleep(time.Second * 2)
-    server.Shutdown()
-
-    // Wait for all messages to be processed
-    wg.Wait()
-
-    // Print dropped messages
-    dropped := server.GetDroppedMessages()
-    if len(dropped) > 0 {
-        fmt.Println("Dropped messages:", dropped)
-    }
+    // Create input channels
+    ch1 := make(chan string)
+    ch2 := make(chan string)
+    
+    // Create output channel
+    out := make(chan string)
+    
+    // Start fan-in
+    go FanIn(ch1, ch2, out)
+    
+    // Send messages
+    ch1 <- "Message 1"
+    ch2 <- "Message 2"
+    
+    // Read results
+    fmt.Println(<-out)
+    fmt.Println(<-out)
 }
 ```
 
