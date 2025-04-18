@@ -114,7 +114,6 @@ func TestMessageQueueServer_ConcurrentAccess(t *testing.T) {
 	}
 }
 
-
 func TestMessageQueueServer_RaceConditions(t *testing.T) {
 	config := DefaultConfig()
 	server, err := NewMessageQueueServer(config)

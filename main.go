@@ -6,5 +6,5 @@ import (
 )
 
 func main(){
-	golanglearning.SimulateFanIn()
+	golanglearning.SimulateMultipleFanIn()
 }

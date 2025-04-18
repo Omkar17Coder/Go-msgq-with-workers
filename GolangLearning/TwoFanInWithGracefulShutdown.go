@@ -8,7 +8,7 @@ import (
 //   Presently this code is not scalble and works for less queue
 // In this phase 1 iteration graceful shutdown of all channels and  avoid deadlock.
 
-func FanIn(chan1, chan2 chan string, done chan struct{}) chan string {
+func fanIn(chan1, chan2 chan string, done chan struct{}) chan string {
 	mergedChannel := make(chan string)
 
 	go func(chan1, chan2 chan string, done chan struct{}) {
@@ -31,14 +31,14 @@ func FanIn(chan1, chan2 chan string, done chan struct{}) chan string {
 	return mergedChannel
 }
 
-func SimulateFanIn() {
+func simulateFanIn() {
 	chan1 := make(chan string, 5)
 	chan2 := make(chan string, 5)
-	// now to imporve this code we will add done channel to stop the chnannel.
+	// Now to improve this code we will add done channel to stop the channel.
 
 	done := make(chan struct{})
 
-	mergedChannel := FanIn(chan1, chan2, done)
+	mergedChannel := fanIn(chan1, chan2, done)
 
 	// insetinn message in channel1
 	go func(chan1 chan string) {
